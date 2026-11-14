@@ -4,6 +4,7 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import { AppShell } from '@/components/layout/app-shell'
+import { CataloguePage } from '@/routes/catalogue'
 import { DashboardPage } from '@/routes/dashboard'
 import { PlaceholderPage } from '@/routes/placeholder'
 
@@ -25,7 +26,11 @@ const routeTree = rootRoute.addChildren([
     component: DashboardPage,
   }),
   page('/caisse', 'Point de vente & caisse', 'Scan, panier, encaissement multi-moyens et ticket 80 mm.'),
-  page('/catalogue', 'Catalogue & stock', 'Articles, niveaux de stock par dépôt et journal des mouvements.'),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/catalogue',
+    component: CataloguePage,
+  }),
   page('/factures', 'Factures & créances', 'Factures, avoirs, règlements partiels et balance âgée.'),
   page('/tiers', 'Clients & tiers', 'Fiches clients et fournisseurs, encours et plafonds de crédit.'),
   page('/parametres', 'Paramètres', 'Entreprise, dépôts, utilisateurs et rôles.'),
