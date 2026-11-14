@@ -16,9 +16,28 @@ export const newPasswordSchema = z
   .max(200)
   .refine((p) => /[a-zA-Z]/.test(p) && /\d/.test(p), 'Au moins une lettre et un chiffre')
 
-export const authUserSchema = z.object({
-  id: z.string(),
-  email: z.string(),
-  name: z.string(),
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Mot de passe actuel obligatoire').max(200),
+    newPassword: newPasswordSchema,
+  })
+  .refine((v) => v.currentPassword !== v.newPassword, {
+    message: 'Le nouveau mot de passe doit être différent de l’actuel',
+    path: ['newPassword'],
+  })
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
+
+const nameSchema = z.string().trim().min(2, 'Nom trop court').max(80)
+
+export const userCreateSchema = z.object({
+  name: nameSchema,
+  email: loginInputSchema.shape.email,
   role: roleSchema,
 })
+export type UserCreateInput = z.infer<typeof userCreateSchema>
+
+export const userUpdateSchema = z
+  .object({ name: nameSchema, role: roleSchema, active: z.boolean() })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, 'Aucune modification')
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>

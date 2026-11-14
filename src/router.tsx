@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { AppShell } from '@/components/layout/app-shell'
 import { session } from '@/lib/session'
 import { CataloguePage } from '@/routes/catalogue'
+import { ChangePasswordPage } from '@/routes/change-password'
 import { DashboardPage } from '@/routes/dashboard'
 import { LoginPage } from '@/routes/login'
 import { PlaceholderPage } from '@/routes/placeholder'
@@ -28,7 +29,16 @@ const loginRoute = createRoute({
   component: LoginPage,
 })
 
-/** Tout ce qui est sous cette route exige une session. */
+const passwordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mot-de-passe',
+  beforeLoad: ({ location }) => {
+    if (!session.get()) throw redirect({ to: '/connexion', search: { redirect: location.href } })
+  },
+  component: ChangePasswordPage,
+})
+
+/** Tout ce qui est sous cette route exige une session (et un mot de passe définitif). */
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'app',
@@ -36,6 +46,7 @@ const appRoute = createRoute({
     if (!session.get()) {
       throw redirect({ to: '/connexion', search: { redirect: location.href } })
     }
+    if (session.get()?.user.mustChangePassword) throw redirect({ to: '/mot-de-passe' })
   },
   component: AppShell,
 })
@@ -49,6 +60,7 @@ const page = (path: string, title: string, description: string) =>
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  passwordRoute,
   appRoute.addChildren([
     createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage }),
     page('/caisse', 'Point de vente & caisse', 'Scan, panier, encaissement multi-moyens et ticket 80 mm.'),

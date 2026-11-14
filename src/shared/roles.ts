@@ -22,6 +22,10 @@ export const permissions = {
   moveStock: ['ADMIN', 'MANAGER', 'STOCK_KEEPER'],
   /** Accès au dashboard d'administration. */
   accessAdmin: ['ADMIN', 'MANAGER'],
+  /** Voir la liste des comptes. */
+  viewUsers: ['ADMIN', 'MANAGER'],
+  /** Créer des comptes, changer les rôles, désactiver, réinitialiser. */
+  manageUsers: ['ADMIN'],
 } as const satisfies Record<string, readonly Role[]>
 
 export type Permission = keyof typeof permissions
@@ -30,7 +34,14 @@ export function can(role: Role | undefined, permission: Permission): boolean {
   return role !== undefined && (permissions[permission] as readonly Role[]).includes(role)
 }
 
-export type AuthUser = { id: string; email: string; name: string; role: Role }
+export type AuthUser = {
+  id: string
+  email: string
+  name: string
+  role: Role
+  /** Mot de passe provisoire : à changer avant toute autre action. */
+  mustChangePassword: boolean
+}
 
 /** Vérification légère d'un utilisateur relu depuis le stockage local. */
 export function isAuthUser(v: unknown): v is AuthUser {
@@ -41,9 +52,25 @@ export function isAuthUser(v: unknown): v is AuthUser {
     typeof u.id === 'string' &&
     typeof u.email === 'string' &&
     typeof u.name === 'string' &&
+    typeof u.mustChangePassword === 'boolean' &&
     isRole(u.role)
   )
 }
+
+/** Compte vu depuis l'écran « Utilisateurs & rôles ». */
+export type UserRow = {
+  id: string
+  email: string
+  name: string
+  role: Role
+  active: boolean
+  mustChangePassword: boolean
+  lastLoginAt: string | null
+  createdAt: string
+}
+
+/** Réponse à une création / réinitialisation : le mot de passe n'est montré qu'une fois. */
+export type TemporaryPasswordResponse = { user: UserRow; temporaryPassword: string }
 
 export type LoginResponse = {
   token: string

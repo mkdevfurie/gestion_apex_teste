@@ -49,6 +49,8 @@ export function AppShell() {
   if (!current) {
     return <Navigate to="/connexion" search={{ redirect: location.href, expired: true }} replace />
   }
+  // Mot de passe réinitialisé par un administrateur pendant la session.
+  if (current.user.mustChangePassword) return <Navigate to="/mot-de-passe" replace />
   const { user } = current
   const initials = user.name
     .split(/\s+/)
@@ -98,7 +100,9 @@ export function AppShell() {
             </div>
             <div className="min-w-0 flex-1 leading-tight">
               <div className="truncate text-sm font-medium">{user.name}</div>
-              <div className="truncate text-xs text-muted-foreground">{roleLabels[user.role]}</div>
+              <Link to="/mot-de-passe" className="truncate text-xs text-muted-foreground underline-offset-2 hover:underline">
+                {roleLabels[user.role]} · mot de passe
+              </Link>
             </div>
             <Button variant="ghost" size="icon-sm" onClick={logout} aria-label="Se déconnecter" title="Se déconnecter">
               <LogOut />

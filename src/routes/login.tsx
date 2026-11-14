@@ -29,7 +29,11 @@ export function LoginPage() {
     }
     setErrors({})
     try {
-      await login.mutateAsync(parsed.data)
+      const res = await login.mutateAsync(parsed.data)
+      if (res.user.mustChangePassword) {
+        await navigate({ to: '/mot-de-passe', replace: true })
+        return
+      }
       // Ne suit que des chemins internes (pas de redirection ouverte).
       const target = redirect?.startsWith('/') && !redirect.startsWith('//') ? redirect : '/'
       await navigate({ to: target, replace: true })
