@@ -9,7 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatDateTime, formatQty } from '@/lib/format'
+import { useUser } from '@/lib/session'
 import {
+  can,
   formatXof,
   movementTypeLabels,
   movementTypeSchema,
@@ -31,6 +33,9 @@ import { Caps, MovementTypeBadge, SignedQty, StockQty } from '@/features/catalog
 const PAGE_SIZE = 25
 
 export function CataloguePage() {
+  const user = useUser()
+  const canMove = can(user.role, 'moveStock')
+  const canEdit = can(user.role, 'manageCatalog')
   const warehouses = useWarehouses()
   const categories = useCategories()
 
@@ -85,18 +90,26 @@ export function CataloguePage() {
           <h1 className="text-2xl font-semibold tracking-tight">Catalogue & mouvements de stock</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="success" onClick={() => openAction({ mode: 'movement', type: 'PURCHASE_RECEIPT' })}>
-            <PackagePlus /> Entrée de stock
-          </Button>
-          <Button onClick={() => setProductForm({ open: true })}>
-            <Plus /> Nouvel article
-          </Button>
-          <Button variant="outline" onClick={() => openAction({ mode: 'inventory' })}>
-            <ClipboardCheck /> Inventaire
-          </Button>
-          <Button variant="outline" onClick={() => openAction({ mode: 'transfer' })}>
-            <ArrowLeftRight /> Transfert
-          </Button>
+          {canMove && (
+            <Button variant="success" onClick={() => openAction({ mode: 'movement', type: 'PURCHASE_RECEIPT' })}>
+              <PackagePlus /> Entrée de stock
+            </Button>
+          )}
+          {canEdit && (
+            <Button onClick={() => setProductForm({ open: true })}>
+              <Plus /> Nouvel article
+            </Button>
+          )}
+          {canMove && (
+            <>
+              <Button variant="outline" onClick={() => openAction({ mode: 'inventory' })}>
+                <ClipboardCheck /> Inventaire
+              </Button>
+              <Button variant="outline" onClick={() => openAction({ mode: 'transfer' })}>
+                <ArrowLeftRight /> Transfert
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -204,8 +217,8 @@ export function CataloguePage() {
         productId={selectedId}
         warehouseId={warehouseId || undefined}
         onClose={() => setSelectedId(null)}
-        onAction={(a, p) => openAction(a, p)}
-        onEdit={(p) => setProductForm({ open: true, product: p })}
+        onAction={canMove ? (a, p) => openAction(a, p) : undefined}
+        onEdit={canEdit ? (p) => setProductForm({ open: true, product: p }) : undefined}
       />
       <StockActionDialog
         action={action}

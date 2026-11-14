@@ -13,8 +13,9 @@ type Props = {
   productId: string | null
   warehouseId?: string
   onClose: () => void
-  onAction: (action: StockAction, product: ProductDetail) => void
-  onEdit: (product: ProductDetail) => void
+  /** Absent : rôle sans droit de mouvement (les boutons sont masqués). */
+  onAction?: (action: StockAction, product: ProductDetail) => void
+  onEdit?: (product: ProductDetail) => void
 }
 
 /** Fiche article : valorisation, stock par dépôt et journal récent. */
@@ -114,18 +115,24 @@ export function ProductSheet({ productId, warehouseId, onClose, onAction, onEdit
               </section>
 
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="success" className="col-span-2" onClick={() => onAction({ mode: 'movement' }, p)}>
-                  <PackagePlus /> Saisir un mouvement
-                </Button>
-                <Button variant="outline" onClick={() => onAction({ mode: 'inventory' }, p)}>
-                  <ClipboardCheck /> Inventaire
-                </Button>
-                <Button variant="outline" onClick={() => onAction({ mode: 'transfer' }, p)}>
-                  <ArrowLeftRight /> Transfert
-                </Button>
-                <Button variant="ghost" className="col-span-2" onClick={() => onEdit(p)}>
-                  <Pencil /> Modifier la fiche
-                </Button>
+                {onAction && (
+                  <>
+                    <Button variant="success" className="col-span-2" onClick={() => onAction({ mode: 'movement' }, p)}>
+                      <PackagePlus /> Saisir un mouvement
+                    </Button>
+                    <Button variant="outline" onClick={() => onAction({ mode: 'inventory' }, p)}>
+                      <ClipboardCheck /> Inventaire
+                    </Button>
+                    <Button variant="outline" onClick={() => onAction({ mode: 'transfer' }, p)}>
+                      <ArrowLeftRight /> Transfert
+                    </Button>
+                  </>
+                )}
+                {onEdit && (
+                  <Button variant="ghost" className="col-span-2" onClick={() => onEdit(p)}>
+                    <Pencil /> Modifier la fiche
+                  </Button>
+                )}
               </div>
             </div>
           </>

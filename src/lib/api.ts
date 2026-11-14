@@ -1,6 +1,8 @@
 // Client HTTP minimal.
 // En dev, Vite relaie /api vers NestJS (voir vite.config.ts) : pas de CORS.
 // En production, VITE_API_URL pointe vers l'API déployée (ex. https://api.exemple.sn/api).
+import { session } from './session'
+
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
 
 /** Erreur API avec le message métier renvoyé par NestJS (en français). */
@@ -13,11 +15,16 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = session.token()
   let res: Response
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init?.headers,
+      },
     })
   } catch {
     throw new ApiError(0, 'Serveur injoignable. Vérifiez la connexion.')
@@ -25,8 +32,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { message?: string | string[] } | null
     const msg = Array.isArray(body?.message) ? body.message.join(' · ') : body?.message
+    // Session expirée ou révoquée : on la ferme, la route protégée renvoie
+    // vers la page de connexion (sauf pour l'appel de connexion lui-même).
+    if (res.status === 401 && token && session.token() === token) session.clear()
     throw new ApiError(res.status, msg ?? `Erreur ${res.status}`)
   }
+  if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 

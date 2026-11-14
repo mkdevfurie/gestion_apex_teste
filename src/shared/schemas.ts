@@ -1,8 +1,8 @@
 import { z } from 'zod'
+import { roles } from './roles.js'
 
-// Doit rester aligné sur les enums de apps/api/prisma/schema.prisma.
-export const roleSchema = z.enum(['ADMIN', 'MANAGER', 'CASHIER', 'STOCK_KEEPER'])
-export type Role = z.infer<typeof roleSchema>
+// Doit rester aligné sur les enums du schéma Prisma (dépôt backend).
+export const roleSchema = z.enum(roles)
 
 export const paymentMethodSchema = z.enum([
   'CASH',
