@@ -14,6 +14,11 @@ import { ChangePasswordPage } from '@/routes/change-password'
 import { LoginPage } from '@/routes/login'
 import { HomePage } from '@/routes/home'
 import { MesVentesPage } from '@/routes/mes-ventes'
+import { ClientsPage } from '@/routes/clients'
+import { DocumentsPage } from '@/routes/documents'
+import { DocumentPage } from '@/routes/document'
+import { AchatsPage } from '@/routes/achats'
+import { InventairePage } from '@/routes/inventaire'
 
 const rootRoute = createRootRoute({ component: Outlet })
 
@@ -60,6 +65,11 @@ const routeTree = rootRoute.addChildren([
     createRoute({ getParentRoute: () => appRoute, path: '/caisse', component: CaissePage }),
     createRoute({ getParentRoute: () => appRoute, path: '/mes-ventes', component: MesVentesPage }),
     createRoute({ getParentRoute: () => appRoute, path: '/catalogue', component: CataloguePage }),
+    createRoute({ getParentRoute: () => appRoute, path: '/clients', component: ClientsPage }),
+    createRoute({ getParentRoute: () => appRoute, path: '/documents', component: DocumentsPage }),
+    createRoute({ getParentRoute: () => appRoute, path: '/documents/$id', component: DocumentPage }),
+    createRoute({ getParentRoute: () => appRoute, path: '/achats', component: AchatsPage }),
+    createRoute({ getParentRoute: () => appRoute, path: '/inventaire', component: InventairePage }),
   ]),
 ])
 

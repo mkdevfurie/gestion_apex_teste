@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { parseNumber } from '@/features/catalog/form-utils'
 import { formatXof, paymentMethodLabels, quickCashAmounts, type PaymentMethod, type Settlement } from '@/shared'
-import { newPayment, type PaymentDraft } from './payment-draft'
+import { newPayment, type MoneyMethod, type PaymentDraft } from './payment-draft'
 
-const METHODS: PaymentMethod[] = ['CASH', 'WAVE', 'ORANGE_MONEY', 'FREE_MONEY', 'CARD', 'BANK_TRANSFER', 'CHEQUE']
+const METHODS: MoneyMethod[] = ['CASH', 'WAVE', 'ORANGE_MONEY', 'FREE_MONEY', 'CARD', 'BANK_TRANSFER', 'CHEQUE']
 const needsReference = (m: PaymentMethod) => m !== 'CASH'
 
 type Props = {
@@ -26,7 +26,7 @@ export function PaymentPanel({ total, payments, onChange, settlement, disabled }
     payments.filter((p) => p.key !== exceptKey).reduce((a, p) => a + (parseNumber(p.amount) || 0), 0)
 
   /** Choix du moyen (paiement simple) : hors espèces, on propose le montant exact. */
-  function pickMethod(method: PaymentMethod) {
+  function pickMethod(method: MoneyMethod) {
     const p = payments[0]
     onChange([{ ...p, method, amount: method === 'CASH' ? '' : String(total), reference: '' }])
   }
@@ -77,7 +77,7 @@ export function PaymentPanel({ total, payments, onChange, settlement, disabled }
                   <select
                     id={`pm-${p.key}`}
                     value={p.method}
-                    onChange={(e) => update(p.key, { method: e.target.value as PaymentMethod })}
+                    onChange={(e) => update(p.key, { method: e.target.value as MoneyMethod })}
                     className="h-9 min-w-28 rounded-md border border-input bg-card px-2 text-sm"
                   >
                     {METHODS.map((m) => (

@@ -4,7 +4,7 @@ import { quickCashAmounts, saleInputSchema, settlePayments } from './sales.js'
 describe('settlePayments', () => {
   it('espèces seules : rend la monnaie', () => {
     const r = settlePayments(77_408, [{ method: 'CASH', amount: 80_000 }])
-    expect(r).toEqual({ ok: true, applied: [{ method: 'CASH', amount: 77_408 }], cashTendered: 80_000, change: 2_592 })
+    expect(r).toEqual({ ok: true, applied: [{ method: 'CASH', amount: 77_408 }], cashTendered: 80_000, change: 2_592, credit: 0 })
   })
 
   it('paiement mixte : Wave exact, espèces pour le reste', () => {
@@ -21,7 +21,7 @@ describe('settlePayments', () => {
 
   it('mobile money seul, montant exact : pas de ligne espèces', () => {
     const r = settlePayments(5_192, [{ method: 'ORANGE_MONEY', amount: 5_192 }])
-    expect(r).toEqual({ ok: true, applied: [{ method: 'ORANGE_MONEY', amount: 5_192 }], cashTendered: 0, change: 0 })
+    expect(r).toEqual({ ok: true, applied: [{ method: 'ORANGE_MONEY', amount: 5_192 }], cashTendered: 0, change: 0, credit: 0 })
   })
 
   it('refuse un montant insuffisant et indique ce qui manque', () => {
@@ -30,6 +30,17 @@ describe('settlePayments', () => {
       error: 'Montant insuffisant',
       remaining: 192,
     })
+  })
+
+  it('à crédit : l’argent remis est imputé, le reste devient une créance', () => {
+    expect(settlePayments(50_000, [{ method: 'CASH', amount: 20_000 }], true)).toEqual({
+      ok: true,
+      applied: [{ method: 'CASH', amount: 20_000 }],
+      cashTendered: 20_000,
+      change: 0,
+      credit: 30_000,
+    })
+    expect(settlePayments(50_000, [], true)).toMatchObject({ ok: true, applied: [], credit: 50_000 })
   })
 
   it('refuse un trop-perçu hors espèces (on ne rend pas la monnaie sur Wave)', () => {
@@ -42,7 +53,7 @@ describe('settlePayments', () => {
       { method: 'WAVE', amount: 5_000 },
       { method: 'CASH', amount: 1_000 },
     ])
-    expect(r).toEqual({ ok: true, applied: [{ method: 'WAVE', amount: 5_000 }], cashTendered: 1_000, change: 1_000 })
+    expect(r).toEqual({ ok: true, applied: [{ method: 'WAVE', amount: 5_000 }], cashTendered: 1_000, change: 1_000, credit: 0 })
   })
 })
 
@@ -69,5 +80,6 @@ describe('saleInputSchema', () => {
   it('refuse un panier vide ou un montant nul', () => {
     expect(saleInputSchema.safeParse({ ...base, lines: [] }).success).toBe(false)
     expect(saleInputSchema.safeParse({ ...base, payments: [{ method: 'CASH', amount: 0 }] }).success).toBe(false)
+    expect(saleInputSchema.safeParse({ ...base, payments: [{ method: 'CREDIT_NOTE', amount: 10 }] }).success).toBe(false)
   })
 })

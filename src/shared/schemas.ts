@@ -12,6 +12,7 @@ export const paymentMethodSchema = z.enum([
   'BANK_TRANSFER',
   'CHEQUE',
   'CARD',
+  'CREDIT_NOTE',
 ])
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>
 
@@ -23,10 +24,13 @@ export const paymentMethodLabels: Record<PaymentMethod, string> = {
   BANK_TRANSFER: 'Virement',
   CHEQUE: 'Chèque',
   CARD: 'Carte',
+  CREDIT_NOTE: 'Avoir imputé',
 }
 
-export const moneySchema = z.number().int().nonnegative()
-export const quantitySchema = z.number().positive().multipleOf(0.001)
+/** Montants FCFA : entiers, plafonnés (colonnes entières 32 bits en base). */
+export const MAX_AMOUNT = 2_000_000_000
+export const moneySchema = z.number().int().nonnegative().max(MAX_AMOUNT, 'Montant trop élevé')
+export const quantitySchema = z.number().positive().max(1_000_000, 'Quantité trop élevée').multipleOf(0.001)
 export const percentSchema = z.number().min(0).max(100)
 
 export const saleLineInputSchema = z.object({

@@ -32,6 +32,14 @@ export const permissions = {
   grantDiscount: ['ADMIN', 'MANAGER'],
   /** Tableaux de bord, ventes de tous, caisses, journal d'activité. */
   viewReports: ['ADMIN', 'MANAGER'],
+  /** Clients : fiches, comptes, encaissements de créances. */
+  manageCustomers: ['ADMIN', 'MANAGER', 'CASHIER'],
+  /** Devis, factures A4, avoirs (retours clients). */
+  issueInvoices: ['ADMIN', 'MANAGER'],
+  /** Fournisseurs, réceptions d'achats. */
+  managePurchases: ['ADMIN', 'MANAGER', 'STOCK_KEEPER'],
+  /** Régler les fournisseurs (sortie d'argent). */
+  paySuppliers: ['ADMIN', 'MANAGER'],
   /** Voir les coûts d'achat (PMP), la valorisation et les marges. */
   viewCosts: ['ADMIN', 'MANAGER', 'STOCK_KEEPER'],
   /** Paramètres, société, dépôts. */

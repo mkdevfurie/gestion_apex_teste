@@ -3,6 +3,10 @@ import { Link, Navigate, Outlet, useLocation } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import {
   Boxes,
+  ClipboardCheck,
+  FileText,
+  PackagePlus,
+  Users,
   ExternalLink,
   Landmark,
   LayoutDashboard,
@@ -21,7 +25,7 @@ import { ADMIN_URL } from '@/features/reports/admin-url'
 import { can, roleLabels, type AuthUser, type Role } from '@/shared'
 import { ApiStatus } from './api-status'
 
-type NavItem = { to: '/' | '/caisse' | '/mes-ventes' | '/catalogue'; label: string; icon: LucideIcon }
+type NavItem = { to: '/' | '/caisse' | '/mes-ventes' | '/catalogue' | '/clients' | '/documents' | '/achats' | '/inventaire'; label: string; icon: LucideIcon }
 
 /** Chaque rôle ne voit que ses outils. */
 function navFor(role: Role): NavItem[] {
@@ -30,19 +34,26 @@ function navFor(role: Role): NavItem[] {
       return [
         { to: '/caisse', label: 'Caisse', icon: ShoppingCart },
         { to: '/mes-ventes', label: 'Mes ventes', icon: Receipt },
+        { to: '/clients', label: 'Clients', icon: Users },
         { to: '/catalogue', label: 'Prix & stock', icon: Boxes },
       ]
     case 'STOCK_KEEPER':
       return [
         { to: '/', label: 'Tableau du magasin', icon: Warehouse },
         { to: '/catalogue', label: 'Catalogue & mouvements', icon: Boxes },
+        { to: '/achats', label: 'Réceptions fournisseurs', icon: PackagePlus },
+        { to: '/inventaire', label: 'Inventaire', icon: ClipboardCheck },
       ]
     default:
       return [
         { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
         { to: '/caisse', label: 'Caisse', icon: ShoppingCart },
         { to: '/mes-ventes', label: 'Mes ventes', icon: Receipt },
+        { to: '/clients', label: 'Clients & créances', icon: Users },
+        { to: '/documents', label: 'Factures & devis', icon: FileText },
+        { to: '/achats', label: 'Achats & fournisseurs', icon: PackagePlus },
         { to: '/catalogue', label: 'Catalogue & stock', icon: Boxes },
+        { to: '/inventaire', label: 'Inventaire', icon: ClipboardCheck },
       ]
   }
 }

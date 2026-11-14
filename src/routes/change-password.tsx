@@ -1,3 +1,4 @@
+import { SessionsCard } from '@/features/auth/sessions-card'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Landmark, Loader2 } from 'lucide-react'
@@ -103,6 +104,8 @@ export function ChangePasswordPage() {
             )}
           </Button>
         </form>
+
+        {!pending && <SessionsCard />}
 
         <div className="flex justify-between text-sm">
           {pending ? (

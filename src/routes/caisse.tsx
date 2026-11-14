@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Lock, Minus, Plus, Printer, ScanBarcode, ShoppingCart, Trash2, X } from 'lucide-react'
+import { CloudOff, Lock, Minus, Plus, Printer, RefreshCw, ScanBarcode, ShoppingCart, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +11,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { parseNumber } from '@/features/catalog/form-utils'
 import { useCategories, useProducts } from '@/features/catalog/queries'
 import { Caps } from '@/features/catalog/ui'
+import { CustomerPicker } from '@/features/commerce/customer-picker'
 import { useCart, type CartProduct } from '@/features/pos/cart'
+import { isNetworkError, outbox, refreshOfflineCatalog, searchOffline, useOutbox, type QueuedSale } from '@/features/pos/offline'
 import { useSettings } from '@/features/reports/queries'
 import { newPayment, type PaymentDraft } from '@/features/pos/payment-draft'
 import { PaymentPanel } from '@/features/pos/payment-panel'
@@ -27,6 +29,7 @@ import {
   priceWithVat,
   settlePayments,
   type CashSessionSummary,
+  type CustomerRow,
   type ProductPage,
 } from '@/shared'
 
@@ -59,6 +62,19 @@ function Register({ session, onClosed }: { session: CashSessionSummary; onClosed
   const canDiscount = can(user.role, 'grantDiscount')
   const cart = useCart(user.id)
   const createSale = useCreateSale()
+  const settings = useSettings().data
+  const queue = useOutbox(user.id)
+  const [customer, setCustomer] = useState<CustomerRow | null>(null)
+  const [credit, setCredit] = useState(false)
+  const [provisional, setProvisional] = useState<QueuedSale | null>(null)
+  // Vente à crédit : gérant / administrateur, ou caissier si les paramètres l'autorisent.
+  const canCredit = can(user.role, 'issueInvoices') || (user.role === 'CASHIER' && Boolean(settings?.cashierCanSellOnCredit))
+  const onCredit = credit && customer !== null
+
+  // Copie locale du catalogue du dépôt, pour continuer à vendre si le réseau tombe.
+  useEffect(() => {
+    if (navigator.onLine) void refreshOfflineCatalog(session.warehouse.id).catch(() => undefined)
+  }, [session.warehouse.id, session.ticketCount])
 
   const [payments, setPayments] = useState<PaymentDraft[]>([newPayment()])
   const [receiptId, setReceiptId] = useState<string | null>(null)
@@ -71,26 +87,54 @@ function Register({ session, onClosed }: { session: CashSessionSummary; onClosed
     const parsed = payments
       .map((p) => ({ method: p.method, amount: parseNumber(p.amount) ?? 0, reference: p.reference.trim() || undefined }))
       .filter((p) => p.amount > 0)
-    return settlePayments(total, parsed)
-  }, [payments, total, cart.lines.length])
+    return settlePayments(total, parsed, onCredit)
+  }, [payments, total, cart.lines.length, onCredit])
 
   const canCheckout = cart.lines.length > 0 && settlement?.ok === true && !createSale.isPending
 
+  const resetSale = () => {
+    cart.dispatch({ type: 'clear' })
+    setPayments([newPayment()])
+    setCustomer(null)
+    setCredit(false)
+  }
+
   async function checkout() {
     if (!canCheckout) return
+    const input = {
+      clientRequestId: cart.requestId,
+      lines: cart.lines.map((l) => ({ productId: l.product.id, quantity: l.quantity, discountRate: l.discountRate })),
+      payments: payments
+        .map((p) => ({ method: p.method, amount: parseNumber(p.amount) ?? 0, reference: p.reference.trim() || undefined }))
+        .filter((p) => p.amount > 0),
+      customerId: customer?.id,
+      credit: onCredit,
+    }
     try {
-      const receipt = await createSale.mutateAsync({
-        clientRequestId: cart.requestId,
-        lines: cart.lines.map((l) => ({ productId: l.product.id, quantity: l.quantity, discountRate: l.discountRate })),
-        payments: payments
-          .map((p) => ({ method: p.method, amount: parseNumber(p.amount) ?? 0, reference: p.reference.trim() || undefined }))
-          .filter((p) => p.amount > 0),
-      })
+      const receipt = await createSale.mutateAsync(input)
       setReceiptId(receipt.id)
-      cart.dispatch({ type: 'clear' })
-      setPayments([newPayment()])
+      resetSale()
     } catch (err) {
-      toast.error((err as Error).message)
+      if (isNetworkError(err) && !onCredit) {
+        // Hors ligne : la vente part en file d'attente, envoyée dès le retour du réseau.
+        const queued: QueuedSale = {
+          id: input.clientRequestId,
+          input,
+          createdAt: new Date().toISOString(),
+          preview: {
+            total,
+            lines: cart.lines.map((l, i) => ({ name: l.product.name, quantity: l.quantity, lineTotal: cart.totals.lineTotals[i] })),
+          },
+          status: 'pending',
+        }
+        outbox.add(user.id, queued)
+        setProvisional(queued)
+        resetSale()
+      } else if (isNetworkError(err)) {
+        toast.error('Vente à crédit impossible hors ligne : le plafond du client doit être vérifié par le serveur.')
+      } else {
+        toast.error((err as Error).message)
+      }
     }
   }
 
@@ -122,9 +166,10 @@ function Register({ session, onClosed }: { session: CashSessionSummary; onClosed
   return (
     <div className="space-y-4">
       <SessionBar session={session} onClose={() => setClosing(true)} />
+      <OfflineBanner queue={queue} />
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-        <ProductPicker warehouseId={session.warehouse.id} searchRef={searchRef} onAdd={add} />
+        <ProductPicker warehouseId={session.warehouse.id} searchRef={searchRef} onAdd={add} online={queue.online} />
 
         <Card className="gap-0 py-0 lg:sticky lg:top-4">
           <div className="flex items-center justify-between border-b px-4 py-3">
@@ -144,6 +189,22 @@ function Register({ session, onClosed }: { session: CashSessionSummary; onClosed
               >
                 <Trash2 /> Vider
               </Button>
+            )}
+          </div>
+
+          <div className="space-y-2 border-b px-4 py-3">
+            <CustomerPicker
+              value={customer}
+              onChange={(c) => {
+                setCustomer(c)
+                if (!c) setCredit(false)
+              }}
+            />
+            {customer && canCredit && (
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={credit} onChange={(e) => setCredit(e.target.checked)} className="size-4" />
+                Vente à crédit (le reste passe sur le compte du client)
+              </label>
             )}
           </div>
 
@@ -190,6 +251,13 @@ function Register({ session, onClosed }: { session: CashSessionSummary; onClosed
         </Card>
       </div>
 
+      <ProvisionalDialog
+        sale={provisional}
+        onClose={() => {
+          setProvisional(null)
+          setTimeout(() => searchRef.current?.focus(), 0)
+        }}
+      />
       <ReceiptDialog
         id={receiptId}
         onClose={() => {
@@ -243,16 +311,20 @@ function ProductPicker({
   warehouseId,
   searchRef,
   onAdd,
+  online,
 }: {
   warehouseId: string
   searchRef: React.RefObject<HTMLInputElement | null>
   onAdd: (p: CartProduct) => void
+  online: boolean
 }) {
   const [search, setSearch] = useState('')
   const q = useDeferredValue(search.trim())
   const [categoryId, setCategoryId] = useState('')
   const categories = useCategories()
-  const products = useProducts({ q: q || undefined, categoryId: categoryId || undefined, warehouseId, page: 1, pageSize: 48 })
+  const live = useProducts({ q: q || undefined, categoryId: categoryId || undefined, warehouseId, page: 1, pageSize: 48 })
+  // Hors ligne : recherche dans la copie locale du catalogue.
+  const products = online ? live : { isPending: false, data: { items: searchOffline(warehouseId, q) } }
 
   /** Douchette : code-barres ou SKU exact + Entrée → ajouté directement. */
   async function onScan(e: FormEvent) {
@@ -260,7 +332,9 @@ function ProductPicker({
     const code = search.trim()
     if (!code) return
     try {
-      const res = await api<ProductPage>(`/products${qs({ q: code, warehouseId, pageSize: 5 })}`)
+      const res = navigator.onLine
+        ? await api<ProductPage>(`/products${qs({ q: code, warehouseId, pageSize: 5 })}`)
+        : { items: searchOffline(warehouseId, code) }
       const exact = res.items.find((p) => p.barcode === code || p.sku === code.toUpperCase())
       const pick = exact ?? (res.items.length === 1 ? res.items[0] : undefined)
       if (pick) {
@@ -484,4 +558,90 @@ function ReceiptDialog({ id, onClose }: { id: string | null; onClose: () => void
 function discountSteps(max: number): number[] {
   const steps = [0, ...[2, 5, 10, 15, 20, 25, 30, 40, 50].filter((r) => r < max)]
   return max > 0 && !steps.includes(max) ? [...steps, max] : steps
+}
+
+function OfflineBanner({ queue }: { queue: ReturnType<typeof useOutbox> }) {
+  if (queue.online && queue.items.length === 0) return null
+  return (
+    <div
+      role="status"
+      className={cn(
+        'space-y-2 rounded-md border px-4 py-3 text-sm',
+        queue.online ? 'border-[#FDE68A] bg-warning-soft text-warning-soft-foreground' : 'border-[#FECACA] bg-danger-soft text-danger-soft-foreground',
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-2 font-medium">
+          <CloudOff className="size-4" />
+          {queue.online ? 'Connexion rétablie' : 'Hors ligne : les ventes sont enregistrées sur ce poste'}
+          {queue.pending.length > 0 && ` · ${queue.pending.length} vente(s) en attente d’envoi`}
+        </span>
+        {queue.online && queue.pending.length > 0 && (
+          <Button size="sm" variant="outline" onClick={() => void queue.sync()} disabled={queue.syncing}>
+            <RefreshCw className={cn(queue.syncing && 'animate-spin')} /> Envoyer maintenant
+          </Button>
+        )}
+      </div>
+      {queue.failed.map((f) => (
+        <div key={f.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-[#FECACA] bg-card px-3 py-2 text-danger-soft-foreground">
+          <span>
+            Vente du {new Date(f.createdAt).toLocaleString('fr-FR')} ({formatXof(f.preview.total)}) refusée : {f.error}. Appelez un gérant.
+          </span>
+          <span className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => queue.retry(f.id)}>
+              Réessayer
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => confirm('Abandonner cette vente ? Le client doit être remboursé.') && queue.discard(f.id)}>
+              Abandonner
+            </Button>
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Reçu provisoire (hors ligne) : sans numéro, le ticket définitif est émis à la synchronisation. */
+function ProvisionalDialog({ sale, onClose }: { sale: QueuedSale | null; onClose: () => void }) {
+  return (
+    <Dialog open={sale !== null} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Vente enregistrée hors ligne</DialogTitle>
+          <DialogDescription>
+            Elle sera envoyée automatiquement au retour du réseau. Le ticket numéroté sera disponible dans « Mes ventes ».
+          </DialogDescription>
+        </DialogHeader>
+        {sale && (
+          <div className="print-area mx-auto w-[72mm] bg-white px-1 py-3 font-mono text-[11px] text-black">
+            <div className="text-center font-bold">REÇU PROVISOIRE</div>
+            <div className="text-center">Non numéroté — en attente de synchronisation</div>
+            <div className="my-1.5 border-t border-dashed border-black" />
+            <div>{new Date(sale.createdAt).toLocaleString('fr-FR')}</div>
+            {sale.preview.lines.map((l, i) => (
+              <div key={i} className="flex justify-between gap-2">
+                <span className="min-w-0">
+                  {formatQty(l.quantity)} × {l.name}
+                </span>
+                <span className="shrink-0">{formatXof(l.lineTotal)}</span>
+              </div>
+            ))}
+            <div className="my-1.5 border-t border-dashed border-black" />
+            <div className="flex justify-between font-bold">
+              <span>TOTAL TTC (estimé)</span>
+              <span>{formatXof(sale.preview.total)}</span>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer /> Imprimer le reçu provisoire
+          </Button>
+          <Button onClick={onClose} autoFocus>
+            Nouvelle vente
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }

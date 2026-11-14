@@ -11,6 +11,9 @@ export type AppSettings = {
   cashDifferenceTolerance: number
   minOpeningFloat: number
   receiptFooter: string
+  paymentTermDays: number
+  quoteValidityDays: number
+  cashierCanSellOnCredit: boolean
 }
 
 export const defaultSettings: AppSettings = {
@@ -20,6 +23,9 @@ export const defaultSettings: AppSettings = {
   cashDifferenceTolerance: 500,
   minOpeningFloat: 0,
   receiptFooter: 'Merci de votre visite !',
+  paymentTermDays: 30,
+  quoteValidityDays: 15,
+  cashierCanSellOnCredit: false,
 }
 
 export const settingsUpdateSchema = z
@@ -30,6 +36,9 @@ export const settingsUpdateSchema = z
     cashDifferenceTolerance: moneySchema.max(1_000_000),
     minOpeningFloat: moneySchema.max(10_000_000),
     receiptFooter: z.string().trim().max(160),
+    paymentTermDays: z.number().int().min(0).max(365),
+    quoteValidityDays: z.number().int().min(1).max(365),
+    cashierCanSellOnCredit: z.boolean(),
   })
   .partial()
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>
@@ -193,12 +202,32 @@ export const auditActionLabels: Record<string, string> = {
   'company.update': 'Société modifiée',
   'warehouse.create': 'Dépôt créé',
   'warehouse.update': 'Dépôt modifié',
+  'sale.credit': 'Vente à crédit',
+  'invoice.issue': 'Facture émise',
+  'quote.create': 'Devis créé',
+  'quote.convert': 'Devis converti',
+  'credit_note.issue': 'Avoir (retour client)',
+  'customer.create': 'Client créé',
+  'customer.update': 'Client modifié',
+  'customer.payment': 'Règlement client',
+  'supplier.create': 'Fournisseur créé',
+  'supplier.update': 'Fournisseur modifié',
+  'purchase.receive': 'Réception fournisseur',
+  'supplier.payment': 'Règlement fournisseur',
+  'stock.inventory_batch': 'Inventaire complet',
+  'auth.locked': 'Compte verrouillé',
+  'auth.session_revoke': 'Session révoquée',
 }
 
 /** Groupes de filtres du journal. */
 export const auditCategories = {
   auth: 'Connexions',
   sale: 'Ventes',
+  invoice: 'Factures',
+  credit_note: 'Avoirs',
+  customer: 'Clients',
+  supplier: 'Fournisseurs',
+  purchase: 'Achats',
   cash: 'Caisse',
   stock: 'Stock',
   user: 'Comptes',

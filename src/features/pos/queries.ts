@@ -51,7 +51,8 @@ export function useCloseSession() {
 export function useCreateSale() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: SaleInput) => post<SaleReceipt>('/sales', input),
+    mutationFn: (input: Omit<SaleInput, 'kind' | 'credit'> & Partial<Pick<SaleInput, 'kind' | 'credit'>>) =>
+      post<SaleReceipt>('/sales', input),
     onSuccess: (receipt) => {
       qc.setQueryData(posKeys.receipt(receipt.id), receipt)
       // Stock, indicateurs de session et liste des tickets ont changé.

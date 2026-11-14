@@ -54,7 +54,8 @@ export function Ticket80({ receipt, duplicate }: { receipt: SaleReceipt; duplica
       <Rule double />
       <Row left={<>Ticket : <b>{receipt.number}</b></>} right={duplicate ? <b>DUPLICATA</b> : ''} />
       <Row left={formatDateTime(receipt.issuedAt)} right={receipt.warehouse.code} />
-      <Row left={`Caissier : ${receipt.cashier}`} right="" />
+      <Row left={`${receipt.kind === 'INVOICE' ? 'Facture' : 'Caissier'} : ${receipt.cashier}`} right="" />
+      {receipt.customer && <Row left={`Client : ${receipt.customer.name}`} right={receipt.customer.code} />}
       <Rule />
       {receipt.lines.map((l, i) => (
         <div key={i} className="mb-1">
@@ -85,6 +86,13 @@ export function Ticket80({ receipt, duplicate }: { receipt: SaleReceipt; duplica
           <Row left="Monnaie rendue" right={money(receipt.change ?? 0)} strong />
         </>
       ) : null}
+      {receipt.balanceDue > 0 && (
+        <>
+          <Rule />
+          <Row left="RESTE DÛ (crédit)" right={money(receipt.balanceDue)} strong />
+          {receipt.dueDate && <Row left="Échéance" right={new Date(receipt.dueDate).toLocaleDateString('fr-FR')} />}
+        </>
+      )}
       <Rule />
       <div className="text-center text-[10px]">
         <div>Empreinte : {receipt.hash.slice(0, 16)}</div>

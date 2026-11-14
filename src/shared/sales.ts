@@ -12,7 +12,7 @@ export const saleLineSchema = z.object({
 export type SaleLine = z.infer<typeof saleLineSchema>
 
 export const salePaymentSchema = z.object({
-  method: paymentMethodSchema,
+  method: paymentMethodSchema.exclude(['CREDIT_NOTE']),
   /** Pour les espèces : montant REMIS par le client (la monnaie est calculée). */
   amount: moneySchema.positive('Montant obligatoire'),
   reference: z.string().trim().max(100).optional(),
@@ -23,7 +23,16 @@ export const saleInputSchema = z.object({
   /** Généré par la caisse : rejouer la même requête ne crée pas un 2e ticket. */
   clientRequestId: z.string().uuid(),
   lines: z.array(saleLineSchema).min(1, 'Panier vide').max(200),
-  payments: z.array(salePaymentSchema).min(1, 'Aucun règlement').max(6),
+  /** Vide autorisé uniquement pour une vente à crédit (client obligatoire). */
+  payments: z.array(salePaymentSchema).max(6),
+  /** Client : obligatoire pour une facture ou une vente à crédit. */
+  customerId: z.string().uuid().optional(),
+  /** TICKET (caisse) ou INVOICE (facture A4). */
+  kind: z.enum(['TICKET', 'INVOICE']).default('TICKET'),
+  /** Le reste non payé passe en créance sur le compte du client. */
+  credit: z.boolean().default(false),
+  /** Facture hors caisse : dépôt de sortie (sinon celui de la caisse ouverte). */
+  warehouseId: z.string().uuid().optional(),
 })
 export type SaleInput = z.infer<typeof saleInputSchema>
 
@@ -48,6 +57,8 @@ export type Settlement =
       applied: { method: PaymentMethod; amount: number; reference?: string }[]
       cashTendered: number
       change: number
+      /** Reste dû passé en créance (vente à crédit). */
+      credit: number
     }
   | { ok: false; error: string; remaining: number }
 
@@ -57,7 +68,7 @@ export type Settlement =
  * - Espèces : couvrent le reste ; l'excédent est rendu (monnaie).
  * - Le ticket doit être soldé (la vente à crédit passe par une facture).
  */
-export function settlePayments(total: number, payments: SalePayment[]): Settlement {
+export function settlePayments(total: number, payments: SalePayment[], allowCredit = false): Settlement {
   const cash = payments.filter((p) => p.method === 'CASH')
   const other = payments.filter((p) => p.method !== 'CASH')
   const otherSum = other.reduce((a, p) => a + p.amount, 0)
@@ -68,12 +79,18 @@ export function settlePayments(total: number, payments: SalePayment[]): Settleme
   }
   const dueInCash = total - otherSum
   if (cashTendered < dueInCash) {
+    if (allowCredit) {
+      // À crédit : tout l'argent remis est imputé, le reste devient une créance.
+      const applied: { method: PaymentMethod; amount: number; reference?: string }[] = other.map((p) => ({ ...p }))
+      if (cashTendered > 0) applied.push({ method: 'CASH', amount: cashTendered })
+      return { ok: true, applied, cashTendered, change: 0, credit: dueInCash - cashTendered }
+    }
     return { ok: false, error: 'Montant insuffisant', remaining: dueInCash - cashTendered }
   }
 
   const applied: { method: PaymentMethod; amount: number; reference?: string }[] = other.map((p) => ({ ...p }))
   if (dueInCash > 0) applied.push({ method: 'CASH', amount: dueInCash })
-  return { ok: true, applied, cashTendered, change: cashTendered - dueInCash }
+  return { ok: true, applied, cashTendered, change: cashTendered - dueInCash, credit: 0 }
 }
 
 /** Montants « billets » proposés pour un encaissement rapide en espèces. */
@@ -99,6 +116,7 @@ export type ReceiptLine = {
 
 export type SaleReceipt = {
   id: string
+  kind: 'TICKET' | 'INVOICE'
   number: string
   issuedAt: string
   cashier: string
@@ -117,6 +135,10 @@ export type SaleReceipt = {
   hash: string
   /** Pied de ticket (paramètres). */
   footer: string
+  customer: { id: string; code: string; name: string } | null
+  /** Reste dû sur ce document (vente à crédit). */
+  balanceDue: number
+  dueDate: string | null
 }
 
 export type CashSessionSummary = {
