@@ -8,6 +8,7 @@ import {
 import { z } from 'zod'
 import { AppShell } from '@/components/layout/app-shell'
 import { session } from '@/lib/session'
+import { CaissePage } from '@/routes/caisse'
 import { CataloguePage } from '@/routes/catalogue'
 import { ChangePasswordPage } from '@/routes/change-password'
 import { DashboardPage } from '@/routes/dashboard'
@@ -63,7 +64,7 @@ const routeTree = rootRoute.addChildren([
   passwordRoute,
   appRoute.addChildren([
     createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage }),
-    page('/caisse', 'Point de vente & caisse', 'Scan, panier, encaissement multi-moyens et ticket 80 mm.'),
+    createRoute({ getParentRoute: () => appRoute, path: '/caisse', component: CaissePage }),
     createRoute({ getParentRoute: () => appRoute, path: '/catalogue', component: CataloguePage }),
     page('/factures', 'Factures & créances', 'Factures, avoirs, règlements partiels et balance âgée.'),
     page('/tiers', 'Clients & tiers', 'Fiches clients et fournisseurs, encours et plafonds de crédit.'),

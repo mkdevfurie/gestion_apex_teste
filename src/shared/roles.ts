@@ -26,6 +26,10 @@ export const permissions = {
   viewUsers: ['ADMIN', 'MANAGER'],
   /** Créer des comptes, changer les rôles, désactiver, réinitialiser. */
   manageUsers: ['ADMIN'],
+  /** Encaisser à la caisse (ouvrir / clôturer sa session). */
+  sell: ['ADMIN', 'MANAGER', 'CASHIER'],
+  /** Accorder une remise sur une ligne de vente. */
+  grantDiscount: ['ADMIN', 'MANAGER'],
 } as const satisfies Record<string, readonly Role[]>
 
 export type Permission = keyof typeof permissions

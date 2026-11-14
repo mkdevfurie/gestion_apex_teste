@@ -14,7 +14,8 @@ export default defineConfig({
     port: 5173,
     // En dev, /api est relayé vers NestJS : pas de souci de CORS.
     proxy: {
-      '/api': 'http://localhost:3001',
+      // API_PROXY_TARGET permet de viser une autre API (ex. base de test).
+      '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:3001',
     },
   },
 })

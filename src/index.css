@@ -143,3 +143,25 @@
     font-feature-settings: "tnum" 1, "cv11" 1;
   }
 }
+
+/* Impression du ticket 80 mm / ticket Z : seule la zone .print-area sort. */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 72mm;
+    margin: 0 4mm;
+    box-shadow: none !important;
+  }
+}
