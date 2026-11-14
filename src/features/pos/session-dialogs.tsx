@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { parseNumber, selectClass } from '@/features/catalog/form-utils'
 import { useWarehouses } from '@/features/catalog/queries'
+import { useSettings } from '@/features/reports/queries'
 import { Field } from '@/features/catalog/ui'
 import { formatXof, type CashSessionSummary } from '@/shared'
 import { useCloseSession, useOpenSession } from './queries'
@@ -16,6 +17,7 @@ import { ZReport } from './receipt'
 export function OpenSessionCard({ userName }: { userName: string }) {
   const warehouses = useWarehouses()
   const open = useOpenSession()
+  const minFloat = useSettings().data?.minOpeningFloat ?? 0
   const [warehouseId, setWarehouseId] = useState('')
   const [float, setFloat] = useState('')
   const [error, setError] = useState<string>()
@@ -27,6 +29,10 @@ export function OpenSessionCard({ userName }: { userName: string }) {
     const amount = parseNumber(float) ?? 0
     if (!Number.isInteger(amount) || amount < 0) {
       setError('Montant invalide')
+      return
+    }
+    if (amount < minFloat) {
+      setError(`Fond de caisse minimum : ${formatXof(minFloat)}`)
       return
     }
     setError(undefined)
@@ -61,7 +67,7 @@ export function OpenSessionCard({ userName }: { userName: string }) {
                 ))}
               </select>
             </Field>
-            <Field id="open-float" label="Fond de caisse (espèces)" error={error} hint="Billets et pièces présents dans le tiroir à l’ouverture.">
+            <Field id="open-float" label="Fond de caisse (espèces)" error={error} hint={minFloat ? `Minimum : ${formatXof(minFloat)}. Billets et pièces présents dans le tiroir.` : 'Billets et pièces présents dans le tiroir à l’ouverture.'}>
               <Input
                 id="open-float"
                 value={float}

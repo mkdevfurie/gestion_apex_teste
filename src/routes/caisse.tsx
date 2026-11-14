@@ -12,6 +12,7 @@ import { parseNumber } from '@/features/catalog/form-utils'
 import { useCategories, useProducts } from '@/features/catalog/queries'
 import { Caps } from '@/features/catalog/ui'
 import { useCart, type CartProduct } from '@/features/pos/cart'
+import { useSettings } from '@/features/reports/queries'
 import { newPayment, type PaymentDraft } from '@/features/pos/payment-draft'
 import { PaymentPanel } from '@/features/pos/payment-panel'
 import { useCreateSale, useCurrentSession, useReceipt } from '@/features/pos/queries'
@@ -352,6 +353,7 @@ function ProductPicker({
 }
 
 function CartLines({ cart, canDiscount }: { cart: ReturnType<typeof useCart>; canDiscount: boolean }) {
+  const maxDiscount = useSettings().data?.maxDiscountRate ?? 0
   if (cart.lines.length === 0) {
     return (
       <div className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -426,7 +428,7 @@ function CartLines({ cart, canDiscount }: { cart: ReturnType<typeof useCart>; ca
                       onChange={(e) => cart.dispatch({ type: 'setDiscount', productId: l.product.id, discountRate: Number(e.target.value) })}
                       className="ml-1 h-8 rounded-md border border-input bg-background px-1 text-xs"
                     >
-                      {[0, 2, 5, 10, 15, 20].map((r) => (
+                      {discountSteps(maxDiscount).map((r) => (
                         <option key={r} value={r}>
                           {r === 0 ? 'Remise' : `−${r} %`}
                         </option>
@@ -476,4 +478,10 @@ function ReceiptDialog({ id, onClose }: { id: string | null; onClose: () => void
       </DialogContent>
     </Dialog>
   )
+}
+
+/** Remises proposées, plafonnées par le paramètre « remise maximale ». */
+function discountSteps(max: number): number[] {
+  const steps = [0, ...[2, 5, 10, 15, 20, 25, 30, 40, 50].filter((r) => r < max)]
+  return max > 0 && !steps.includes(max) ? [...steps, max] : steps
 }

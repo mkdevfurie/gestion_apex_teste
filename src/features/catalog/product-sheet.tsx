@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDateTime, formatQty } from '@/lib/format'
-import { formatXof, priceWithVat, type ProductDetail } from '@/shared'
+import { useUser } from '@/lib/session'
+import { can, formatXof, priceWithVat, type ProductDetail } from '@/shared'
 import { useProduct } from './queries'
 import type { StockAction } from './stock-action-dialog'
 import { Caps, MovementTypeBadge, SignedQty, StockBadge, StockQty } from './ui'
@@ -20,6 +21,7 @@ type Props = {
 
 /** Fiche article : valorisation, stock par dépôt et journal récent. */
 export function ProductSheet({ productId, warehouseId, onClose, onAction, onEdit }: Props) {
+  const costs = can(useUser().role, 'viewCosts')
   const { data: p, isPending, isError, error } = useProduct(productId ?? undefined, warehouseId)
 
   return (
@@ -54,8 +56,12 @@ export function ProductSheet({ productId, warehouseId, onClose, onAction, onEdit
 
             <div className="space-y-5 p-4">
               <div className="grid grid-cols-2 gap-3">
-                <Stat label="PMP actuel" value={formatXof(p.averageCost)} />
-                <Stat label="Valeur du stock" value={formatXof(Math.max(p.stock, 0) * p.averageCost)} />
+                {costs && (
+                  <>
+                    <Stat label="PMP actuel" value={formatXof(p.averageCost)} />
+                    <Stat label="Valeur du stock" value={formatXof(Math.max(p.stock, 0) * p.averageCost)} />
+                  </>
+                )}
                 <Stat label="Prix de vente TTC" value={formatXof(priceWithVat(p.salePrice, p.vatRate))} sub={`${formatXof(p.salePrice)} HT · TVA ${p.vatRate} %`} />
                 <Stat
                   label={warehouseId ? 'Stock (dépôt)' : 'Stock total'}

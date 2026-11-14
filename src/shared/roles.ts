@@ -30,6 +30,12 @@ export const permissions = {
   sell: ['ADMIN', 'MANAGER', 'CASHIER'],
   /** Accorder une remise sur une ligne de vente. */
   grantDiscount: ['ADMIN', 'MANAGER'],
+  /** Tableaux de bord, ventes de tous, caisses, journal d'activité. */
+  viewReports: ['ADMIN', 'MANAGER'],
+  /** Voir les coûts d'achat (PMP), la valorisation et les marges. */
+  viewCosts: ['ADMIN', 'MANAGER', 'STOCK_KEEPER'],
+  /** Paramètres, société, dépôts. */
+  manageSettings: ['ADMIN'],
 } as const satisfies Record<string, readonly Role[]>
 
 export type Permission = keyof typeof permissions

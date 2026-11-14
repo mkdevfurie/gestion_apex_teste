@@ -10,7 +10,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { formatXof, priceWithVat, productInputSchema, type ProductRow } from '@/shared'
+import { useSettings } from '@/features/reports/queries'
+import { defaultSettings, formatXof, priceWithVat, productInputSchema, type ProductRow } from '@/shared'
 import { useCategories, useCreateCategory, useCreateProduct, useUpdateProduct } from './queries'
 import { fieldErrors, parseNumber, selectClass } from './form-utils'
 import { Field } from './ui'
@@ -37,6 +38,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: Props) {
 
 function ProductForm({ product, onDone }: { product?: ProductRow; onDone: () => void }) {
   const categories = useCategories()
+  const settings = useSettings().data ?? defaultSettings
   const createCategory = useCreateCategory()
   const create = useCreateProduct()
   const update = useUpdateProduct(product?.id ?? '')
@@ -49,8 +51,9 @@ function ProductForm({ product, onDone }: { product?: ProductRow; onDone: () => 
     newCategory: '',
     unit: product?.unit ?? '',
     salePrice: product ? String(product.salePrice) : '',
-    vatRate: String(product?.vatRate ?? 18),
-    alertThreshold: product ? String(product.alertThreshold) : '',
+    // Nouvel article : valeurs par défaut des paramètres.
+    vatRate: String(product?.vatRate ?? settings.defaultVatRate),
+    alertThreshold: String(product ? product.alertThreshold : settings.defaultAlertThreshold),
     location: product?.location ?? '',
     barcode: product?.barcode ?? '',
   })

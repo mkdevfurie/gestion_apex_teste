@@ -115,6 +115,8 @@ export type SaleReceipt = {
   cashTendered: number | null
   change: number | null
   hash: string
+  /** Pied de ticket (paramètres). */
+  footer: string
 }
 
 export type CashSessionSummary = {

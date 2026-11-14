@@ -11,9 +11,9 @@ import { session } from '@/lib/session'
 import { CaissePage } from '@/routes/caisse'
 import { CataloguePage } from '@/routes/catalogue'
 import { ChangePasswordPage } from '@/routes/change-password'
-import { DashboardPage } from '@/routes/dashboard'
 import { LoginPage } from '@/routes/login'
-import { PlaceholderPage } from '@/routes/placeholder'
+import { HomePage } from '@/routes/home'
+import { MesVentesPage } from '@/routes/mes-ventes'
 
 const rootRoute = createRootRoute({ component: Outlet })
 
@@ -52,23 +52,14 @@ const appRoute = createRoute({
   component: AppShell,
 })
 
-const page = (path: string, title: string, description: string) =>
-  createRoute({
-    getParentRoute: () => appRoute,
-    path,
-    component: () => <PlaceholderPage title={title} description={description} />,
-  })
-
 const routeTree = rootRoute.addChildren([
   loginRoute,
   passwordRoute,
   appRoute.addChildren([
-    createRoute({ getParentRoute: () => appRoute, path: '/', component: DashboardPage }),
+    createRoute({ getParentRoute: () => appRoute, path: '/', component: HomePage }),
     createRoute({ getParentRoute: () => appRoute, path: '/caisse', component: CaissePage }),
+    createRoute({ getParentRoute: () => appRoute, path: '/mes-ventes', component: MesVentesPage }),
     createRoute({ getParentRoute: () => appRoute, path: '/catalogue', component: CataloguePage }),
-    page('/factures', 'Factures & créances', 'Factures, avoirs, règlements partiels et balance âgée.'),
-    page('/tiers', 'Clients & tiers', 'Fiches clients et fournisseurs, encours et plafonds de crédit.'),
-    page('/parametres', 'Paramètres', 'Entreprise, dépôts, utilisateurs et rôles.'),
   ]),
 ])
 

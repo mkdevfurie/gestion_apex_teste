@@ -36,6 +36,8 @@ export function CataloguePage() {
   const user = useUser()
   const canMove = can(user.role, 'moveStock')
   const canEdit = can(user.role, 'manageCatalog')
+  // Le caissier ne voit ni coûts d'achat ni valorisation (l'API les masque aussi).
+  const costs = can(user.role, 'viewCosts')
   const warehouses = useWarehouses()
   const categories = useCategories()
 
@@ -87,7 +89,7 @@ export function CataloguePage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Caps>Inventaire permanent · {warehouseLabel}</Caps>
-          <h1 className="text-2xl font-semibold tracking-tight">Catalogue & mouvements de stock</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{costs ? 'Catalogue & mouvements de stock' : 'Prix & stock'}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           {canMove && (
@@ -113,7 +115,7 @@ export function CataloguePage() {
         </div>
       </div>
 
-      <Kpis summary={products.data?.summary} />
+      {costs && <Kpis summary={products.data?.summary} />}
 
       <Tabs value={tab} onValueChange={setTab} className="gap-4">
         <Card className="py-3">
@@ -182,6 +184,7 @@ export function CataloguePage() {
         <TabsContent value="catalogue">
           <Card className="gap-0 overflow-hidden py-0">
             <ProductTable
+              costs={costs}
               rows={products.data?.items}
               loading={products.isPending}
               error={products.error?.message}
@@ -200,7 +203,7 @@ export function CataloguePage() {
 
         <TabsContent value="journal">
           <Card className="gap-0 overflow-hidden py-0">
-            <MovementTable rows={movements.data?.items} loading={movements.isPending} error={movements.error?.message} />
+            <MovementTable costs={costs} rows={movements.data?.items} loading={movements.isPending} error={movements.error?.message} />
             <Pager
               page={journalPage}
               pageSize={50}
@@ -342,11 +345,13 @@ function FilterSelect({
 const th = 'h-8 bg-background text-[11px] font-semibold tracking-wider text-muted-foreground uppercase'
 
 function ProductTable({
+  costs,
   rows,
   loading,
   error,
   onSelect,
 }: {
+  costs: boolean
   rows?: ProductRow[]
   loading: boolean
   error?: string
@@ -360,7 +365,7 @@ function ProductTable({
           <TableHead className={th}>Désignation</TableHead>
           <TableHead className={th}>Catégorie</TableHead>
           <TableHead className={th}>Unité</TableHead>
-          <TableHead className={cn(th, 'text-right')}>PMP</TableHead>
+          {costs && <TableHead className={cn(th, 'text-right')}>PMP</TableHead>}
           <TableHead className={cn(th, 'text-right')}>Prix TTC</TableHead>
           <TableHead className={cn(th, 'text-right')}>Stock</TableHead>
           <TableHead className={cn(th, 'pr-4 text-right')}>Seuil</TableHead>
@@ -405,7 +410,7 @@ function ProductTable({
               )}
             </TableCell>
             <TableCell className="text-muted-foreground">{p.unit}</TableCell>
-            <TableCell className="text-right font-mono text-[13px]">{formatXof(p.averageCost)}</TableCell>
+            {costs && <TableCell className="text-right font-mono text-[13px]">{formatXof(p.averageCost)}</TableCell>}
             <TableCell className="text-right font-mono text-[13px]">{formatXof(priceWithVat(p.salePrice, p.vatRate))}</TableCell>
             <TableCell className="text-right">
               <StockQty value={p.stock} status={p.status} className="text-base" />
@@ -419,7 +424,7 @@ function ProductTable({
   )
 }
 
-function MovementTable({ rows, loading, error }: { rows?: MovementRow[]; loading: boolean; error?: string }) {
+function MovementTable({ costs, rows, loading, error }: { costs: boolean; rows?: MovementRow[]; loading: boolean; error?: string }) {
   return (
     <Table>
       <TableHeader>
@@ -430,7 +435,7 @@ function MovementTable({ rows, loading, error }: { rows?: MovementRow[]; loading
           <TableHead className={th}>Dépôt</TableHead>
           <TableHead className={cn(th, 'text-right')}>Quantité</TableHead>
           <TableHead className={cn(th, 'text-right')}>Solde</TableHead>
-          <TableHead className={cn(th, 'text-right')}>Coût unit.</TableHead>
+          {costs && <TableHead className={cn(th, 'text-right')}>Coût unit.</TableHead>}
           <TableHead className={cn(th, 'pr-4')}>Motif · Saisi par</TableHead>
         </TableRow>
       </TableHeader>
@@ -460,7 +465,7 @@ function MovementTable({ rows, loading, error }: { rows?: MovementRow[]; loading
               <SignedQty value={m.quantity} />
             </TableCell>
             <TableCell className="text-right font-mono text-[13px]">{formatQty(m.balanceAfter)}</TableCell>
-            <TableCell className="text-right font-mono text-[13px] text-muted-foreground">{formatXof(m.unitCost)}</TableCell>
+            {costs && <TableCell className="text-right font-mono text-[13px] text-muted-foreground">{formatXof(m.unitCost)}</TableCell>}
             <TableCell className="max-w-56 pr-4 text-xs whitespace-normal text-muted-foreground">
               {m.reason ?? '—'} · {m.user.name}
             </TableCell>

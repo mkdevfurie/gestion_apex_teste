@@ -88,9 +88,7 @@ export function Ticket80({ receipt, duplicate }: { receipt: SaleReceipt; duplica
       <Rule />
       <div className="text-center text-[10px]">
         <div>Empreinte : {receipt.hash.slice(0, 16)}</div>
-        <div className="mt-2">Merci de votre visite !</div>
-        <div>Les marchandises vendues ne sont</div>
-        <div>ni reprises ni échangées sans ce ticket.</div>
+        {receipt.footer && <div className="mt-2 whitespace-pre-line">{receipt.footer}</div>}
       </div>
     </Paper>
   )

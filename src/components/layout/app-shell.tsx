@@ -3,29 +3,57 @@ import { Link, Navigate, Outlet, useLocation } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import {
   Boxes,
-  FileText,
+  ExternalLink,
   Landmark,
   LayoutDashboard,
   LogOut,
-  Settings,
+  Receipt,
   ShoppingCart,
-  Users,
+  Warehouse,
+  type LucideIcon,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useLogout } from '@/features/auth/auth-actions'
 import { api } from '@/lib/api'
 import { session, useSession } from '@/lib/session'
-import { roleLabels, type AuthUser } from '@/shared'
+import { ADMIN_URL } from '@/features/reports/admin-url'
+import { can, roleLabels, type AuthUser, type Role } from '@/shared'
 import { ApiStatus } from './api-status'
 
-const nav = [
-  { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
-  { to: '/caisse', label: 'Point de vente & caisse', icon: ShoppingCart },
-  { to: '/catalogue', label: 'Catalogue & stock', icon: Boxes },
-  { to: '/factures', label: 'Factures & créances', icon: FileText },
-  { to: '/tiers', label: 'Clients & tiers', icon: Users },
-  { to: '/parametres', label: 'Paramètres', icon: Settings },
-] as const
+type NavItem = { to: '/' | '/caisse' | '/mes-ventes' | '/catalogue'; label: string; icon: LucideIcon }
+
+/** Chaque rôle ne voit que ses outils. */
+function navFor(role: Role): NavItem[] {
+  switch (role) {
+    case 'CASHIER':
+      return [
+        { to: '/caisse', label: 'Caisse', icon: ShoppingCart },
+        { to: '/mes-ventes', label: 'Mes ventes', icon: Receipt },
+        { to: '/catalogue', label: 'Prix & stock', icon: Boxes },
+      ]
+    case 'STOCK_KEEPER':
+      return [
+        { to: '/', label: 'Tableau du magasin', icon: Warehouse },
+        { to: '/catalogue', label: 'Catalogue & mouvements', icon: Boxes },
+      ]
+    default:
+      return [
+        { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
+        { to: '/caisse', label: 'Caisse', icon: ShoppingCart },
+        { to: '/mes-ventes', label: 'Mes ventes', icon: Receipt },
+        { to: '/catalogue', label: 'Catalogue & stock', icon: Boxes },
+      ]
+  }
+}
+
+/** Repère visuel de l'espace : couleur et intitulé par rôle. */
+const spaces: Record<Role, { label: string; accent: string }> = {
+  CASHIER: { label: 'Espace caisse', accent: 'bg-success' },
+  STOCK_KEEPER: { label: 'Espace magasin', accent: 'bg-warning' },
+  MANAGER: { label: 'Espace gérant', accent: 'bg-primary' },
+  ADMIN: { label: 'Espace gérant', accent: 'bg-primary' },
+}
 
 export function AppShell() {
   const current = useSession()
@@ -52,6 +80,8 @@ export function AppShell() {
   // Mot de passe réinitialisé par un administrateur pendant la session.
   if (current.user.mustChangePassword) return <Navigate to="/mot-de-passe" replace />
   const { user } = current
+  const nav = navFor(user.role)
+  const space = spaces[user.role]
   const initials = user.name
     .split(/\s+/)
     .map((w) => w[0])
@@ -61,16 +91,15 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-svh flex-col md:flex-row">
-      <aside className="flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:h-svh md:w-64 md:border-r md:border-b-0">
+      <aside className="relative flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:h-svh md:w-64 md:border-r md:border-b-0">
+        <div aria-hidden className={cn('absolute inset-x-0 top-0 h-1', space.accent)} />
         <div className="flex items-center gap-3 px-4 py-4">
           <div className="grid size-9 place-items-center rounded-md bg-primary text-primary-foreground">
             <Landmark className="size-5" />
           </div>
           <div className="min-w-0 flex-1 leading-tight">
             <div className="font-semibold">Apex Ledger</div>
-            <div className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-              ERP Commerce
-            </div>
+            <div className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{space.label}</div>
           </div>
           {/* Mobile : déconnexion accessible sans la barre latérale */}
           <Button variant="ghost" size="icon" className="md:hidden" onClick={logout} aria-label="Se déconnecter">
@@ -90,6 +119,17 @@ export function AppShell() {
               {label}
             </Link>
           ))}
+          {can(user.role, 'accessAdmin') && (
+            <a
+              href={ADMIN_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="flex shrink-0 items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground md:mt-2 md:border-t md:pt-3"
+            >
+              <ExternalLink className="size-4" />
+              Console d’administration
+            </a>
+          )}
         </nav>
 
         <div className="mt-auto hidden space-y-2 p-3 md:block">
