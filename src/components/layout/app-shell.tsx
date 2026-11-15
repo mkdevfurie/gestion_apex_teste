@@ -59,11 +59,28 @@ function navFor(role: Role): NavItem[] {
 }
 
 /** Repère visuel de l'espace : couleur et intitulé par rôle. */
-const spaces: Record<Role, { label: string; accent: string }> = {
-  CASHIER: { label: 'Espace caisse', accent: 'bg-success' },
-  STOCK_KEEPER: { label: 'Espace magasin', accent: 'bg-warning' },
-  MANAGER: { label: 'Espace gérant', accent: 'bg-primary' },
-  ADMIN: { label: 'Espace gérant', accent: 'bg-primary' },
+type Space = { id: 'caisse' | 'magasin' | 'gerant'; label: string; icon: LucideIcon; color: string }
+const spaces: Record<Role, Space> = {
+  CASHIER: { id: 'caisse', label: 'Espace caisse', icon: ShoppingCart, color: '#053b36' },
+  STOCK_KEEPER: { id: 'magasin', label: 'Espace magasin', icon: Warehouse, color: '#3b1a0b' },
+  MANAGER: { id: 'gerant', label: 'Espace gérant', icon: Landmark, color: '#0c1f4d' },
+  ADMIN: { id: 'gerant', label: 'Espace gérant', icon: Landmark, color: '#0c1f4d' },
+}
+
+/** Pose le thème de l'espace sur <html> (couleurs, barre du navigateur mobile). */
+function useSpaceTheme(space: Space | undefined) {
+  useEffect(() => {
+    if (!space) return
+    const root = document.documentElement
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    const previous = meta?.content
+    root.dataset.space = space.id
+    if (meta) meta.content = space.color
+    return () => {
+      delete root.dataset.space
+      if (meta && previous) meta.content = previous
+    }
+  }, [space])
 }
 
 export function AppShell() {
@@ -83,6 +100,7 @@ export function AppShell() {
   useEffect(() => {
     if (me.data) session.updateUser(me.data)
   }, [me.data])
+  useSpaceTheme(current ? spaces[current.user.role] : undefined)
 
   // Session expirée ou révoquée pendant l'utilisation (réponse 401).
   if (!current) {
@@ -93,6 +111,8 @@ export function AppShell() {
   const { user } = current
   const nav = navFor(user.role)
   const space = spaces[user.role]
+  const SpaceIcon = space.icon
+  const touch = space.id === 'caisse'
   const initials = user.name
     .split(/\s+/)
     .map((w) => w[0])
@@ -102,18 +122,17 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-svh flex-col md:flex-row">
-      <aside className="relative flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:h-svh md:w-64 md:border-r md:border-b-0">
-        <div aria-hidden className={cn('absolute inset-x-0 top-0 h-1', space.accent)} />
+      <aside className="flex shrink-0 flex-col bg-sidebar text-sidebar-foreground md:sticky md:top-0 md:h-svh md:w-64">
         <div className="flex items-center gap-3 px-4 py-4">
-          <div className="grid size-9 place-items-center rounded-md bg-primary text-primary-foreground">
-            <Landmark className="size-5" />
+          <div className="grid size-10 place-items-center rounded-lg bg-sidebar-brand text-sidebar-brand-foreground shadow-sm">
+            <SpaceIcon className="size-5" />
           </div>
           <div className="min-w-0 flex-1 leading-tight">
             <div className="font-semibold">Apex Ledger</div>
-            <div className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">{space.label}</div>
+            <div className="text-[11px] font-semibold tracking-wider text-sidebar-muted uppercase">{space.label}</div>
           </div>
           {/* Mobile : déconnexion accessible sans la barre latérale */}
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={logout} aria-label="Se déconnecter">
+          <Button variant="ghost" size="icon" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground md:hidden" onClick={logout} aria-label="Se déconnecter">
             <LogOut />
           </Button>
         </div>
@@ -124,9 +143,12 @@ export function AppShell() {
               key={to}
               to={to}
               activeOptions={{ exact: to === '/' }}
-              className="flex shrink-0 items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
+              className={cn(
+                'flex shrink-0 items-center gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-[3px] focus-visible:ring-white/40 focus-visible:outline-none data-[status=active]:bg-sidebar-primary data-[status=active]:text-sidebar-primary-foreground',
+                touch ? 'py-3 text-base' : 'py-2',
+              )}
             >
-              <Icon className="size-4" />
+              <Icon className={touch ? 'size-5' : 'size-4'} />
               {label}
             </Link>
           ))}
@@ -135,7 +157,7 @@ export function AppShell() {
               href={ADMIN_URL}
               target="_blank"
               rel="noreferrer"
-              className="flex shrink-0 items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground md:mt-2 md:border-t md:pt-3"
+              className="flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground md:mt-2 md:border-t md:border-sidebar-border md:pt-3"
             >
               <ExternalLink className="size-4" />
               Console d’administration
@@ -145,17 +167,17 @@ export function AppShell() {
 
         <div className="mt-auto hidden space-y-2 p-3 md:block">
           <ApiStatus />
-          <div className="flex items-center gap-3 rounded-md border bg-background px-3 py-2">
-            <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground" aria-hidden>
+          <div className="flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent px-3 py-2">
+            <div className="grid size-8 shrink-0 place-items-center rounded-full bg-sidebar-primary text-xs font-semibold text-sidebar-primary-foreground" aria-hidden>
               {initials}
             </div>
             <div className="min-w-0 flex-1 leading-tight">
               <div className="truncate text-sm font-medium">{user.name}</div>
-              <Link to="/mot-de-passe" className="truncate text-xs text-muted-foreground underline-offset-2 hover:underline">
+              <Link to="/mot-de-passe" className="truncate text-xs text-sidebar-muted underline-offset-2 hover:underline">
                 {roleLabels[user.role]} · mot de passe
               </Link>
             </div>
-            <Button variant="ghost" size="icon-sm" onClick={logout} aria-label="Se déconnecter" title="Se déconnecter">
+            <Button variant="ghost" size="icon-sm" className="text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground" onClick={logout} aria-label="Se déconnecter" title="Se déconnecter">
               <LogOut />
             </Button>
           </div>

@@ -50,6 +50,69 @@
   --sidebar-foreground: #0f172a;
   --sidebar-accent: #eff4ff;
   --sidebar-border: #e2e8f0;
+  --sidebar-primary: #0f172a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-muted: #64748b;
+  --sidebar-brand: #0f172a;
+  --sidebar-brand-foreground: #ffffff;
+}
+
+/*
+ * Un espace = une couleur, pour savoir d'un coup d'œil où l'on est.
+ * Le rôle est posé sur <html data-space="…"> par AppShell.
+ */
+:root[data-space] {
+  --radius: 0.75rem;
+  --sidebar-foreground: #ffffff;
+  --sidebar-muted: rgb(255 255 255 / 0.62);
+  --sidebar-accent: rgb(255 255 255 / 0.1);
+  --sidebar-border: rgb(255 255 255 / 0.12);
+  --sidebar-brand: #ffffff;
+}
+
+/* Caisse : vert sarcelle, gros boutons tactiles. */
+:root[data-space="caisse"] {
+  --background: #f3f8f7;
+  --primary: #0f766e;
+  --ring: #0f766e;
+  --accent: #e6f4f1;
+  --secondary: #e9f2f0;
+  --muted: #edf3f2;
+  --border: #d5e5e1;
+  --sidebar: #053b36;
+  --sidebar-primary: #2dd4bf;
+  --sidebar-primary-foreground: #042f2b;
+  --sidebar-brand-foreground: #053b36;
+}
+
+/* Magasin : orange brique, ambiance entrepôt. */
+:root[data-space="magasin"] {
+  --background: #faf7f4;
+  --primary: #c2410c;
+  --ring: #c2410c;
+  --accent: #fff1e6;
+  --secondary: #f6eee7;
+  --muted: #f4eee9;
+  --border: #ebdfd4;
+  --sidebar: #3b1a0b;
+  --sidebar-primary: #fb923c;
+  --sidebar-primary-foreground: #3b1a0b;
+  --sidebar-brand-foreground: #3b1a0b;
+}
+
+/* Gérant : bleu roi, pilotage. */
+:root[data-space="gerant"] {
+  --background: #f4f7fc;
+  --primary: #1d4ed8;
+  --ring: #1d4ed8;
+  --accent: #e8effd;
+  --secondary: #edf2fa;
+  --muted: #eef2f8;
+  --border: #dbe3f0;
+  --sidebar: #0c1f4d;
+  --sidebar-primary: #60a5fa;
+  --sidebar-primary-foreground: #0c1f4d;
+  --sidebar-brand-foreground: #0c1f4d;
 }
 
 .dark {
@@ -132,6 +195,11 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-brand: var(--sidebar-brand);
+  --color-sidebar-brand-foreground: var(--sidebar-brand-foreground);
 }
 
 @layer base {

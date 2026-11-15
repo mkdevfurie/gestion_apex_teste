@@ -20,8 +20,8 @@ export function ApiStatus() {
         : { label: 'Base injoignable', tone: 'bg-warning' }
 
   return (
-    <div className="rounded-md border bg-background px-3 py-2 text-xs">
-      <div className="font-semibold tracking-wider text-muted-foreground uppercase">
+    <div className="rounded-lg border border-sidebar-border px-3 py-2 text-xs">
+      <div className="font-semibold tracking-wider text-sidebar-muted uppercase">
         Serveur
       </div>
       <div className="mt-1 flex items-center gap-2">
